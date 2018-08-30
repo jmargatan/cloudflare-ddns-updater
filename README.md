@@ -7,8 +7,9 @@ Cloudflare API:
 `https://api.cloudflare.com/client/v4/zones/:zone_id/dns_records/:dns_record_id`
 
 ```
-$ python3 cloudflare-ddns-updater.py -h
-usage: cloudflare-ddns-updater.py [-h] [--frequency min max]
+$ ./cloudflare-ddns-updater.py -h
+usage: cloudflare-ddns-updater.py [-h] [--frequency MIN MAX]
+                                  [--log-dir LOG_DIR]
                                   zone_id dns_record_id email key
 
 Periodically checks the WAN IP address of this device by calling
@@ -31,11 +32,14 @@ positional arguments:
 
 optional arguments:
   -h, --help           show this help message and exit
-  --frequency min max  The minimum and maximum duration (in minutes) on how
+  --frequency MIN MAX  The minimum and maximum duration (in minutes) on how
                        frequent this script should be executed. The script is
                        designed to randomly execute within the provided range
                        to avoid a uniform pattern. If not set, by default, the
                        script runs every 10 minutes.
+  --log-dir LOG_DIR    The directory where log files will be generated. The
+                       log is rotated every midnight and kept for 7 days. If
+                       not set, by default, it will log to console.
 ```
 
 by James Margatan

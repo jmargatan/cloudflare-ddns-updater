@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Periodically checks the WAN IP address of this device by calling myip.dnsomatic.com and submit the change to the provided Cloudflare zone and DNS record, if necessary.
 #
@@ -6,8 +6,11 @@
 
 import argparse
 import datetime
+import errno
 import json
 import logging
+import logging.handlers
+import os
 import random
 import requests
 import time
@@ -34,8 +37,7 @@ CF_URL_EXAMPLE = CF_ZONE_AND_DNS_RECORD_URL_TEMPLATE.format(
 
 DNS_O_MATIC_URL = 'http://myip.dnsomatic.com/'
 
-LOG_FMT = '%(asctime)s %(levelname)s %(message)s'
-logging.basicConfig(format = LOG_FMT)
+LOG_FORMAT = '%(asctime)s %(levelname)s %(message)s'
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
 
@@ -84,6 +86,7 @@ class Config:
     self.key = args.key
     self.min_frequency = args.frequency[0]
     self.max_frequency = args.frequency[1]
+    self.log_dir = args.log_dir
 
   def __str__(self):
     return f'config:\n\
@@ -92,7 +95,8 @@ class Config:
       {ARG_EMAIL}: {self.email}\n\
       {ARG_KEY}: {self.key}\n\
       min_frequency: {self.min_frequency}\n\
-      max_frequency: {self.max_frequency}'
+      max_frequency: {self.max_frequency}\n\
+      log_dir: {self.log_dir}'
 
 def check_and_update(cfg):
   LOG.info('Initiating check and update...')
@@ -124,6 +128,16 @@ def update_cloudflare_dns_record(cfg, dns_record):
   except Exception as e:
     raise RuntimeError(f'Unable to update Cloudflare DNS record for [zone_id: {cfg.zone_id}] [dns_record_id: {cfg.dns_record_id}] with [dns_record: {dns_record}].') from e
 
+def ensure_log_directory_exist(log_dir):
+  if os.path.exists(log_dir):
+    return
+
+  try:
+    os.makedirs(log_dir)
+  except OSError as e:
+    if e.errno != errno.EEXIST:
+      raise RuntimeError(f'Unable to create [log_dir: {log_dir}].') from e
+
 def main():
   arg_parser = argparse.ArgumentParser(description='Periodically checks the WAN IP address of this device by calling https://myip.dnsomatic.com/ and submit the change to the provided Cloudflare zone and DNS record, if necessary. Cloudflare API: ' + CF_URL_EXAMPLE)
   arg_parser.add_argument(ARG_ZONE_ID,
@@ -137,11 +151,27 @@ def main():
   arg_parser.add_argument('--frequency',
     nargs=2,
     default=[10, 10],
-    metavar=('min', 'max'),
+    metavar=('MIN', 'MAX'),
+    type=int,
     help='The minimum and maximum duration (in minutes) on how frequent this script should be executed. The script is designed to randomly execute within the provided range to avoid a uniform pattern. If not set, by default, the script runs every 10 minutes.')
+  arg_parser.add_argument('--log-dir',
+    help='The directory where log files will be generated. The log is rotated every midnight and kept for 7 days. If not set, by default, it will log to console.')
 
   args = arg_parser.parse_args()
   cfg = Config(args)
+
+  if cfg.log_dir is not None:
+    ensure_log_directory_exist(cfg.log_dir)
+    log_file_name = f'{cfg.log_dir}/cloudflare-dns-updater.out'
+    log_handler = logging.handlers.TimedRotatingFileHandler(log_file_name,
+      when='midnight',
+      backupCount=7)
+    log_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+    log_handler.setLevel(logging.INFO)
+    LOG.addHandler(log_handler)
+    LOG.propagate = False
+  else:
+    logging.basicConfig(format=LOG_FORMAT)
 
   LOG.info(f'Starting Cloudflare DDNS Updater with {cfg}')
 
