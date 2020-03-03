@@ -20,12 +20,10 @@ MINUTE_IN_SECONDS = 60
 # Const for app args.
 ARG_ZONE_ID = 'zone_id'
 ARG_DNS_RECORD_ID = 'dns_record_id'
-ARG_EMAIL = 'email'
-ARG_KEY = 'key'
+ARG_KEY = 'api_token'
 
 # Const for Cloudflare request headers.
-CF_HEADER_EMAIL = 'X-Auth-Email'
-CF_HEADER_KEY = 'X-Auth-Key'
+CF_HEADER_KEY = 'Authorization'
 
 CF_DNS_RECORD_IP_FIELD = 'content'
 
@@ -54,15 +52,14 @@ def get_cloudflare_dns_record_url(zone_id, dns_record_id):
     zone_id = zone_id,
     dns_record_id = dns_record_id)
 
-def get_cloudflare_dns_record_headers(email, key):
+def get_cloudflare_dns_record_headers(key):
   return {
-    CF_HEADER_EMAIL: email,
-    CF_HEADER_KEY: key
+    CF_HEADER_KEY: "Bearer " + key
   }
 
 def get_cloudflare_dns_record(cfg):
   cf_url = get_cloudflare_dns_record_url(cfg.zone_id, cfg.dns_record_id)
-  cf_headers = get_cloudflare_dns_record_headers(cfg.email, cfg.key)
+  cf_headers = get_cloudflare_dns_record_headers(cfg.key)
 
   r = requests.get(cf_url, headers=cf_headers)
   try:
@@ -82,7 +79,6 @@ class Config:
   def __init__(self, args):
     self.zone_id = args.zone_id
     self.dns_record_id = args.dns_record_id
-    self.email = args.email
     self.key = args.key
     self.min_frequency = args.frequency[0]
     self.max_frequency = args.frequency[1]
@@ -92,7 +88,6 @@ class Config:
     return f'config:\n\
       {ARG_ZONE_ID}: {self.zone_id}\n\
       {ARG_DNS_RECORD_ID}: {self.dns_record_id}\n\
-      {ARG_EMAIL}: {self.email}\n\
       {ARG_KEY}: {self.key}\n\
       min_frequency: {self.min_frequency}\n\
       max_frequency: {self.max_frequency}\n\
@@ -120,7 +115,7 @@ def check_and_update(cfg):
 
 def update_cloudflare_dns_record(cfg, dns_record):
   cf_url = get_cloudflare_dns_record_url(cfg.zone_id, cfg.dns_record_id)
-  cf_headers = get_cloudflare_dns_record_headers(cfg.email, cfg.key)
+  cf_headers = get_cloudflare_dns_record_headers(cfg.key)
 
   r = requests.put(cf_url, headers=cf_headers, data=json.dumps(dns_record))
   try:
@@ -144,10 +139,8 @@ def main():
     help='The Cloudflare Zone ID where the DNS record to be modified belongs to.')
   arg_parser.add_argument(ARG_DNS_RECORD_ID,
     help='The Cloudflare DNS Record ID to be modified when the WAN IP of this device changes.')
-  arg_parser.add_argument(ARG_EMAIL,
-    help=f'The email address of a Cloudflare account that has access to the provided zone and DNS record. This information will be sent as the {CF_HEADER_EMAIL} header to the Cloudflare API.')
   arg_parser.add_argument(ARG_KEY,
-    help=f'The API key of the Cloudflare account identified by the provided email address. This information will be sent as the {CF_HEADER_KEY} header to Cloudflare API.')
+    help=f'The token of the API created by you to manipulate DNS addresses. This information will be sent as the {CF_HEADER_KEY} header to Cloudflare API. If you don\'t have one yet, go to your Cloudflare dashboard and create an API token with the Edit zone DNS template to get your token.')
   arg_parser.add_argument('--frequency',
     nargs=2,
     default=[10, 10],
