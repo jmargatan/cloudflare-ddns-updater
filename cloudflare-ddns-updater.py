@@ -12,8 +12,9 @@ import logging
 import logging.handlers
 import os
 import random
-import requests
 import time
+
+import requests
 
 MINUTE_IN_SECONDS = 60
 
@@ -33,17 +34,17 @@ CF_URL_EXAMPLE = CF_ZONE_AND_DNS_RECORD_URL_TEMPLATE.format(
   zone_id = ':' + ARG_ZONE_ID,
   dns_record_id = ':' + ARG_DNS_RECORD_ID)
 
-DNS_O_MATIC_URL = 'http://myip.dnsomatic.com/'
+WAN_IP_ECHO_SERVER = 'https://ipinfo.io/ip'
 
 LOG_FORMAT = '%(asctime)s %(levelname)s %(message)s'
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
 
 def get_wan_ip():
-  r = requests.get(DNS_O_MATIC_URL)
+  r = requests.get(WAN_IP_ECHO_SERVER)
   try:
     r.raise_for_status()
-    return r.text
+    return r.text.rstrip()
   except Exception as e:
     raise RuntimeError('Unable to get WAN IP.') from e
 
@@ -121,7 +122,7 @@ def update_cloudflare_dns_record(cfg, dns_record):
   try:
     r.raise_for_status()
   except Exception as e:
-    raise RuntimeError(f'Unable to update Cloudflare DNS record for [zone_id: {cfg.zone_id}] [dns_record_id: {cfg.dns_record_id}] with [dns_record: {dns_record}].') from e
+    raise RuntimeError('Unable to get Cloudflare DNS record for [zone_id: {cfg.zone_id}] [dns_record_id: {cfg.dns_record_id}].' % (cfg.zone_id, cfg.dns_record_id)) from e
 
 def ensure_log_directory_exist(log_dir):
   if os.path.exists(log_dir):
@@ -134,7 +135,7 @@ def ensure_log_directory_exist(log_dir):
       raise RuntimeError(f'Unable to create [log_dir: {log_dir}].') from e
 
 def main():
-  arg_parser = argparse.ArgumentParser(description='Periodically checks the WAN IP address of this device by calling https://myip.dnsomatic.com/ and submit the change to the provided Cloudflare zone and DNS record, if necessary. Cloudflare API: ' + CF_URL_EXAMPLE)
+  arg_parser = argparse.ArgumentParser(description='Periodically checks the WAN IP address of this device by calling a WAN IP echo server and submit the change to the provided Cloudflare zone and DNS record, if necessary. Cloudflare API: ' + CF_URL_EXAMPLE)
   arg_parser.add_argument(ARG_ZONE_ID,
     help='The Cloudflare Zone ID where the DNS record to be modified belongs to.')
   arg_parser.add_argument(ARG_DNS_RECORD_ID,
@@ -143,10 +144,10 @@ def main():
     help=f'The token of the API created by you to manipulate DNS addresses. This information will be sent as the {CF_HEADER_KEY} header to Cloudflare API. If you don\'t have one yet, go to your Cloudflare dashboard and create an API token with the Edit zone DNS template to get your token.')
   arg_parser.add_argument('--frequency',
     nargs=2,
-    default=[10, 10],
+    default=[2, 5],
     metavar=('MIN', 'MAX'),
     type=int,
-    help='The minimum and maximum duration (in minutes) on how frequent this script should be executed. The script is designed to randomly execute within the provided range to avoid a uniform pattern. If not set, by default, the script runs every 10 minutes.')
+    help='The minimum and maximum duration (in minutes) on how frequent this script should be executed. The script is designed to randomly execute within the provided range to avoid a uniform pattern. If not set, by default, the script runs every 2-5 minutes.')
   arg_parser.add_argument('--log-dir',
     help='The directory where log files will be generated. The log is rotated every midnight and kept for 7 days. If not set, by default, it will log to console.')
 

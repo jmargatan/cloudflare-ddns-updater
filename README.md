@@ -1,7 +1,7 @@
 Cloudflare Dynamic DNS (DDNS) Updater
 ===
 
-Periodically checks the WAN IP address of this device by calling [myip.dnsomatic.com](http://myip.dnsomatic.com/) and submit the change to the provided Cloudflare zone and DNS record, if necessary.
+Periodically checks the WAN IP address of this device by calling [a WAN IP echo server](https://ipinfo.io/ip) and submit the change to the provided Cloudflare zone and DNS record, if necessary.
 
 Cloudflare API:
 `https://api.cloudflare.com/client/v4/zones/:zone_id/dns_records/:dns_record_id`
@@ -13,7 +13,7 @@ usage: cloudflare-ddns-updater.py [-h] [--frequency MIN MAX]
                                   zone_id dns_record_id api_token
 
 Periodically checks the WAN IP address of this device by calling
-https://myip.dnsomatic.com/ and submit the change to the provided Cloudflare
+a WAN IP echo server and submit the change to the provided Cloudflare
 zone and DNS record, if necessary. Cloudflare API:
 https://api.cloudflare.com/client/v4/zones/:zone_id/dns_records/:dns_record_id
 
