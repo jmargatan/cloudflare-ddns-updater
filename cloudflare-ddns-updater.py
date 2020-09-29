@@ -80,7 +80,7 @@ class Config:
   def __init__(self, args):
     self.zone_id = args.zone_id
     self.dns_record_id = args.dns_record_id
-    self.key = args.key
+    self.key = args.api_token
     self.min_frequency = args.frequency[0]
     self.max_frequency = args.frequency[1]
     self.log_dir = args.log_dir
